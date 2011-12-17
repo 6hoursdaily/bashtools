@@ -1,0 +1,59 @@
+# Install Postgre SQL using HomeBrew
+function brew_postgresql {
+  echo "concocting PostGRE SQL"
+  brew install postgresql
+  echo "initializing database"
+  initdb /usr/local/var/postgres
+  echo "setting up a socket"
+  sudo chown $USER /var/pgsql_socket/
+  echo "cause this is a 'for OSX' machine, just making sure you can add this to your startup"
+  mkdir -p ~/Library/LaunchAgents
+
+  echo -n "do you want to make this a startup item? (y/n): "
+  read ans
+  if [[ $ans == 'y' ]] then
+    echo "adding postgresql to your startup as requested..."
+    cp /usr/local/Cellar/postgresql/9.0.4/org.postgresql.postgres.plist ~/Library/LaunchAgents/
+  else
+    echo "ok, this won't be a startup item then, good thinking..."
+  fi
+
+  echo "now you must edit the postgresql plist entry to make this work"
+  echo "copy the following:"
+  echo "<string>-c</string>"
+  echo "<string>unix_socket_directory=/var/pgsql_socket</string>"
+  echo "<string>-c</string>"
+  echo "<string>unix_socket_group=_postgres</string>"
+  echo "<string>-c</string>"
+  echo "<string>unix_socket_permissions=0770</string>"
+  echo ""
+  echo "now lets open up your postgres.plist. Proceed (y/n): "
+  read ans
+
+  if [[ $ans == 'y' ]] then
+    vim ~/Library/LaunchAgents/org.postgresql.postgres.plist
+  else
+    echo "make sure you can finish up your config, ok..."
+  fi
+
+  echo "assuming you are setup, should we run postgresql now? (y/n): "
+  read ans
+
+  if [[ $ans == 'y' ]] then
+    launchctl load -w ~/Library/LaunchAgents/org.postgresql.postgres.plist
+    echo "now that should be running, so let's create a user..."
+    createuser -a -d _postgres
+    echo "and let's verify its running..."
+    psql template1 -U _postgres
+  else
+    echo 'to run it, just do:'
+    echo 'launchctl load -w ~/Library/LaunchAgents/org.postgresql.postgres.plist'
+    echo "and don't forget to create a user if haven't created one with:"
+    echo 'createuser -a -d _postgres'
+  fi
+
+  echo "after this setup, you can use the PostgreSQL gem using:"
+  echo "gem install pg"
+  echo 'and add the following to your Rails database.yml file'
+  echo 'template: template'
+}
